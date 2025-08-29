@@ -23,13 +23,11 @@ public class RestauranteController {
     @PostMapping
     public ResponseEntity<?> criarRestaurante(
             @RequestBody Restaurante restaurante,
-            @RequestHeader("X-User-Id") Integer usuarioId) { // Pega o ID do utilizador do cabeçalho
+            @RequestHeader("X-User-Id") Integer usuarioId) {
         try {
-            // Passa o restaurante e o ID do utilizador para o serviço
             Restaurante novoRestaurante = restauranteService.criarRestaurante(restaurante, usuarioId);
             return new ResponseEntity<>(novoRestaurante, HttpStatus.CREATED);
         } catch (RuntimeException e) {
-            // Se o serviço lançar um erro (ex: utilizador não encontrado), retorna uma mensagem de erro
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }

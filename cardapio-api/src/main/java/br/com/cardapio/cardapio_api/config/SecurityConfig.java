@@ -1,5 +1,7 @@
 package br.com.cardapio.cardapio_api.config;
 
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,6 +10,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -21,21 +26,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Desativa a proteção CSRF, comum para APIs REST
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            
-            // Define a gestão de sessão como STATELESS (sem estado),
-            // o que significa que a API não guarda sessões.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // Configura as regras de autorização para os pedidos HTTP
+            // --- ALTERAÇÃO RADICAL AQUI ---
+            // Esta é a regra mais permissiva possível.
+            // Ela diz: "Permita QUALQUER pedido para QUALQUER endpoint".
             .authorizeHttpRequests(authorize -> authorize
-                // Permite o acesso público a qualquer endpoint que comece com "/api/"
-                .requestMatchers("/api/**").permitAll()
-                // Exige que todos os outros pedidos (que não são da nossa API) sejam autenticados
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             );
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
