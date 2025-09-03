@@ -1,12 +1,15 @@
 package br.com.cardapio.cardapio_api.service;
 
 import java.sql.Timestamp;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import br.com.cardapio.cardapio_api.dto.LoginRequestDTO;
+import br.com.cardapio.cardapio_api.dto.RegisterRequestDTO; // 1. Importa o novo DTO
+import br.com.cardapio.cardapio_api.enums.Perfil;
 import br.com.cardapio.cardapio_api.model.Usuario;
 import br.com.cardapio.cardapio_api.repository.UsuarioRepository;
 
@@ -19,34 +22,51 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Método de registo (já existente)
-    public Usuario registrarUsuario(Usuario usuario) {
-        if (usuarioRepository.findByEmail(usuario.getEmail()) != null) {
+    @Autowired
+    private MailService mailService;
+
+    // --- 2. MÉTODO ALTERADO PARA USAR O DTO ---
+    public Usuario registrarUsuario(RegisterRequestDTO data) {
+        if (usuarioRepository.findByEmail(data.getEmail()) != null) {
             throw new RuntimeException("Este e-mail já está cadastrado.");
         }
 
-        String senhaCriptografada = passwordEncoder.encode(usuario.getSenhaHash());
-        usuario.setSenhaHash(senhaCriptografada);
-        usuario.setDataCriacao(new Timestamp(System.currentTimeMillis()));
-        usuario.setEmailVerificado(false);
+        // Cria um novo objeto Usuario a partir dos dados do DTO
+        Usuario novoUsuario = new Usuario();
+        novoUsuario.setNome(data.getNome());
+        novoUsuario.setEmail(data.getEmail());
+        
+        String senhaCriptografada = passwordEncoder.encode(data.getSenha());
+        novoUsuario.setSenhaHash(senhaCriptografada);
 
-        return usuarioRepository.save(usuario);
+        // Converte a String do perfil para o tipo enum
+        novoUsuario.setPerfil(Perfil.valueOf(data.getPerfil().toUpperCase()));
+        
+        // Define os valores padrão
+        novoUsuario.setDataCriacao(new Timestamp(System.currentTimeMillis()));
+        novoUsuario.setEmailVerificado(false);
+        novoUsuario.setTokenVerificacao(UUID.randomUUID().toString());
+
+        Usuario usuarioSalvo = usuarioRepository.save(novoUsuario);
+
+        // Envia o e-mail de verificação
+        mailService.sendVerificationEmail(usuarioSalvo.getEmail(), usuarioSalvo.getTokenVerificacao());
+
+        return usuarioSalvo;
     }
 
-    // --- NOVO MÉTODO PARA AUTENTICAR O UTILIZADOR ---
     public Usuario autenticarUsuario(LoginRequestDTO loginRequest) {
-        // 1. Busca o utilizador no banco de dados pelo e-mail fornecido.
         Usuario usuario = usuarioRepository.findByEmail(loginRequest.getEmail());
 
-        // 2. Verifica se o utilizador foi encontrado E se a senha fornecida
-        //    corresponde à senha encriptada no banco de dados.
         if (usuario != null && passwordEncoder.matches(loginRequest.getSenha(), usuario.getSenhaHash())) {
-            // Se as credenciais estiverem corretas, retorna os dados do utilizador.
+            // Verifica se o e-mail foi verificado
+            if (!usuario.getEmailVerificado()) {
+                throw new RuntimeException("Por favor, verifique seu e-mail antes de fazer login.");
+            }
             return usuario;
         }
 
-        // 3. Se o utilizador não for encontrado ou a senha estiver incorreta,
-        //    lança uma exceção.
         throw new RuntimeException("Credenciais inválidas.");
     }
 }
+

@@ -3,12 +3,13 @@ package br.com.cardapio.cardapio_api.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping; // Importa o GetMapping
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.cardapio.cardapio_api.dto.LoginRequestDTO;
+import br.com.cardapio.cardapio_api.dto.RegisterRequestDTO; // 1. Importa o novo DTO
 import br.com.cardapio.cardapio_api.model.Usuario;
 import br.com.cardapio.cardapio_api.service.UsuarioService;
 
@@ -19,19 +20,18 @@ public class AuthController {
     @Autowired
     private UsuarioService usuarioService;
 
-
-    // Endpoint de registo (já existente)
+    // --- 2. MÉTODO ALTERADO PARA USAR O DTO ---
     @PostMapping("/register")
-    public ResponseEntity<?> registrarUsuario(@RequestBody Usuario usuario) {
+    public ResponseEntity<?> registrarUsuario(@RequestBody RegisterRequestDTO data) {
         try {
-            Usuario novoUsuario = usuarioService.registrarUsuario(usuario);
+            Usuario novoUsuario = usuarioService.registrarUsuario(data);
             return new ResponseEntity<>(novoUsuario, HttpStatus.CREATED);
         } catch (RuntimeException e) {
+            // Retorna a mensagem de erro específica do serviço
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    // Endpoint de login (já existente)
     @PostMapping("/login")
     public ResponseEntity<?> loginUsuario(@RequestBody LoginRequestDTO loginRequest) {
         try {
@@ -42,3 +42,4 @@ public class AuthController {
         }
     }
 }
+
